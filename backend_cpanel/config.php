@@ -12,9 +12,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 $db_host = 'localhost';
-$db_name = 'nombre_de_tu_bd'; // CAMBIAR ESTO
-$db_user = 'usuario_de_tu_bd'; // CAMBIAR ESTO
-$db_pass = 'tu_contraseña'; // CAMBIAR ESTO
+$db_name = 'allucco2_alarma'; // Base de datos creada en cPanel
+$db_user = 'allucco2_alarma_admin'; 
+$db_pass = 'Y&mu0J0d!3I^'; 
 
 try {
     $pdo = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8mb4", $db_user, $db_pass);

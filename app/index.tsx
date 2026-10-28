@@ -9,33 +9,41 @@ import {
   Text,
   TextInput,
   View,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAlerts } from '../context/AlertContext';
 import { colors } from '../constants/theme';
-import { UserRole } from '../types';
-
-const roles: { value: UserRole; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { value: 'vecino', label: 'Vecino', icon: 'home' },
-  { value: 'guardia', label: 'Guardia', icon: 'shield' },
-  { value: 'admin', label: 'Administrador', icon: 'settings' },
-];
 
 export default function LoginScreen() {
   const { user, login } = useAlerts();
   const router = useRouter();
+  
+  const [mode, setMode] = useState<'join' | 'create'>('join');
   const [name, setName] = useState('');
-  const [community, setCommunity] = useState('La Colmena');
-  const [role, setRole] = useState<UserRole>('vecino');
+  const [communityOrCode, setCommunityOrCode] = useState('');
+  const [loading, setLoading] = useState(false);
 
   if (user) {
     return <Redirect href="/(tabs)" />;
   }
 
-  const handleLogin = async () => {
-    if (!name.trim()) return;
-    await login(name, role, community);
-    router.replace('/(tabs)');
+  const handleAuth = async () => {
+    if (!name.trim() || !communityOrCode.trim()) {
+      Alert.alert('Error', 'Por favor completa todos los campos.');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await login(mode, name.trim(), communityOrCode.trim());
+      router.replace('/(tabs)');
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Ocurrió un error al procesar tu solicitud.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -50,64 +58,63 @@ export default function LoginScreen() {
           </View>
           <Text style={styles.title}>OnAlert</Text>
           <Text style={styles.subtitle}>
-            Seguridad comunitaria en tiempo real
+            Seguridad comunitaria conectada
           </Text>
         </View>
 
         <View style={styles.form}>
-          <Text style={styles.label}>Tu nombre</Text>
+          <View style={styles.tabContainer}>
+            <Pressable
+              style={[styles.tab, mode === 'join' && styles.tabActive]}
+              onPress={() => setMode('join')}
+            >
+              <Text style={[styles.tabText, mode === 'join' && styles.tabTextActive]}>
+                Unirme a Zona
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.tab, mode === 'create' && styles.tabActive]}
+              onPress={() => setMode('create')}
+            >
+              <Text style={[styles.tabText, mode === 'create' && styles.tabTextActive]}>
+                Crear Zona
+              </Text>
+            </Pressable>
+          </View>
+
+          <Text style={styles.label}>Tu nombre completo</Text>
           <TextInput
             style={styles.input}
-            placeholder="Nombre de Usuario"
+            placeholder="Ej: María López"
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
           />
 
-          <Text style={styles.label}>Comunidad</Text>
+          <Text style={styles.label}>
+            {mode === 'join' ? 'Código de Invitación' : 'Nombre de la nueva Comunidad'}
+          </Text>
           <TextInput
             style={styles.input}
-            placeholder="Ej: La Colmena"
-            value={community}
-            onChangeText={setCommunity}
+            placeholder={mode === 'join' ? 'Ej: A1B2C3' : 'Ej: Barrio San José'}
+            value={communityOrCode}
+            onChangeText={setCommunityOrCode}
+            autoCapitalize={mode === 'join' ? 'characters' : 'words'}
           />
 
-          <Text style={styles.label}>Rol</Text>
-          <View style={styles.roleRow}>
-            {roles.map((item) => (
-              <Pressable
-                key={item.value}
-                style={[styles.roleChip, role === item.value && styles.roleChipActive]}
-                onPress={() => setRole(item.value)}
-              >
-                <Ionicons
-                  name={item.icon}
-                  size={18}
-                  color={role === item.value ? '#fff' : colors.textSecondary}
-                />
-                <Text
-                  style={[
-                    styles.roleChipText,
-                    role === item.value && styles.roleChipTextActive,
-                  ]}
-                >
-                  {item.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
           <Pressable
-            style={[styles.button, !name.trim() && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={!name.trim()}
+            style={[styles.button, (!name.trim() || !communityOrCode.trim() || loading) && styles.buttonDisabled]}
+            onPress={handleAuth}
+            disabled={!name.trim() || !communityOrCode.trim() || loading}
           >
-            <Text style={styles.buttonText}>Entrar a la comunidad</Text>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>
+                {mode === 'join' ? 'Ingresar como Vecino' : 'Crear como Administrador'}
+              </Text>
+            )}
           </Pressable>
-
-          <Text style={styles.note}>
-            Prototipo funcional · Los datos se guardan localmente en tu dispositivo
-          </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -154,6 +161,35 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 8,
   },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 12,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  tabActive: {
+    backgroundColor: colors.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  tabTextActive: {
+    color: colors.primary,
+  },
   label: {
     fontSize: 13,
     fontWeight: '600',
@@ -170,41 +206,14 @@ const styles = StyleSheet.create({
     color: colors.text,
     backgroundColor: colors.background,
   },
-  roleRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
-  },
-  roleChip: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  roleChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  roleChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  roleChipTextActive: {
-    color: '#fff',
-  },
   button: {
     backgroundColor: colors.primary,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 16,
+    height: 56,
+    justifyContent: 'center',
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -213,12 +222,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
-  },
-  note: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: 12,
-    lineHeight: 18,
   },
 });

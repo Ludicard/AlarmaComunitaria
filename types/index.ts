@@ -18,6 +18,8 @@ export interface User {
   name: string;
   role: UserRole;
   community: string;
+  zone_id: number;
+  invite_code?: string;
 }
 
 export interface Coordinates {

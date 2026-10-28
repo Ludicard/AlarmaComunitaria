@@ -16,20 +16,31 @@ import {
 import { PriorityBadge, StatusBadge, TypeIcon } from '../../components/IncidentCard';
 import { useAlerts } from '../../context/AlertContext';
 import { colors, incidentTypeLabels } from '../../constants/theme';
-import { canManageIncidents, getIncidentMessages } from '../../utils/storage';
+import { canManageIncidents } from '../../utils/storage';
 import { formatDistance, getDistanceKm } from '../../utils/distance';
+import { API_URL } from '../../constants/api';
+import { ChatMessage } from '../../types';
 
 export default function IncidentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { incidents, messages, user, userLocation, confirmSafety, sendMessage, updateStatus } =
+  const { incidents, user, userLocation, confirmSafety, sendMessage, updateStatus } =
     useAlerts();
   const [chatText, setChatText] = useState('');
+  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
+
+  // Fetch messages from API when screen loads
+  useMemo(() => {
+    if (!id) return;
+    fetch(`${API_URL}/api_chat.php?incident_id=${id}`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setLocalMessages(data);
+      })
+      .catch(e => console.error(e));
+  }, [id]);
 
   const incident = incidents.find((i) => i.id === id);
-  const incidentMessages = useMemo(
-    () => (id ? getIncidentMessages(messages, id) : []),
-    [messages, id],
-  );
+  const incidentMessages = localMessages;
 
   if (!incident) {
     return (
